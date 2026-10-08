@@ -10,6 +10,7 @@ use App\Http\Response;
 use App\Http\Router;
 use App\Infra\Config;
 use App\Infra\Database;
+use App\Infra\LoggerFactory;
 use App\Infra\RedisFactory;
 use App\Repositories\MysqlProductRepository;
 use App\Services\ProductService;
@@ -24,6 +25,9 @@ set_error_handler(function (int $severity, string $message, string $file, int $l
     throw new ErrorException($message, 0, $severity, $file, $line);
 });
 
+$startedAt = hrtime(true);
+$logger = LoggerFactory::create();
+
 try {
     // montagem das dependências: controller -> service -> repository -> infra
     $config = Config::fromEnv();
@@ -31,7 +35,7 @@ try {
     $redis = RedisFactory::create($config);
 
     $products = new ProductController(new ProductService(new MysqlProductRepository($db)));
-    $health = new HealthController($db, $redis);
+    $health = new HealthController($db, $redis, $logger);
 
     $router = new Router();
     $router->get('/health', $health->check(...));
@@ -44,8 +48,16 @@ try {
     $response = Response::json(['error' => $e->getMessage()], $e->status, $e->headers);
 } catch (Throwable $e) {
     // detalhes vão para o log do container, nunca para o cliente
-    error_log((string) $e);
+    $logger->error('unhandled exception', ['exception' => $e]);
     $response = Response::json(['error' => 'internal server error'], 500);
 }
 
 $response->send();
+
+// uma linha por requisição, depois da resposta montada
+$logger->info('request', [
+    'method' => $_SERVER['REQUEST_METHOD'] ?? null,
+    'uri' => $_SERVER['REQUEST_URI'] ?? null,
+    'status' => $response->status,
+    'duration_ms' => round((hrtime(true) - $startedAt) / 1e6, 2),
+]);

@@ -8,6 +8,7 @@ use App\Http\Request;
 use App\Http\Response;
 use App\Infra\Database;
 use Predis\Client;
+use Psr\Log\LoggerInterface;
 use Throwable;
 
 // verifica as dependências: 200 se todas respondem, 503 se alguma falha
@@ -16,14 +17,15 @@ final class HealthController
     public function __construct(
         private readonly Database $db,
         private readonly Client $redis,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
     public function check(Request $req): Response
     {
         $checks = [
-            'mysql' => self::probe(fn() => $this->db->query('SELECT 1')),
-            'redis' => self::probe(fn() => $this->redis->ping()),
+            'mysql' => $this->probe('mysql', fn() => $this->db->query('SELECT 1')),
+            'redis' => $this->probe('redis', fn() => $this->redis->ping()),
         ];
         $healthy = !in_array('error', $checks, true);
 
@@ -33,7 +35,7 @@ final class HealthController
         );
     }
 
-    private static function probe(callable $check): string
+    private function probe(string $dependency, callable $check): string
     {
         try {
             $check();
@@ -41,7 +43,7 @@ final class HealthController
             return 'ok';
         } catch (Throwable $e) {
             // o motivo vai para o log; o cliente só vê o estado
-            error_log((string) $e);
+            $this->logger->warning('health check failed', ['dependency' => $dependency, 'exception' => $e]);
 
             return 'error';
         }

@@ -17,7 +17,7 @@ src
 +-- Services        // business rules and validation
 +-- Repositories    // ProductRepository (interface) and its MySQL implementation
 +-- Models          // Product
-+-- Infra           // Config (env), Database (PDO), RedisFactory (Predis)
++-- Infra           // Config (env), Database (PDO), RedisFactory (Predis), LoggerFactory (Monolog)
 database
 +-- migrations      // Phinx migrations; the first one creates the schema
 +-- seeds           // Phinx seeders (ProductSeeder: 500 sample products)
@@ -36,6 +36,14 @@ Repositories implement an interface so a cached implementation can wrap the MySQ
 | PATCH | `/api/products/{id}` | changes `price_cents` and/or `stock` (non-negative integers) |
 
 Swagger UI at `/docs/` (`/` redirects there); the spec is `docs/openapi.yaml`, written by hand: update it when a route changes.
+
+### Logs
+
+[Monolog](https://github.com/Seldaek/monolog) writes one JSON line per event to stderr, which FPM forwards to the container log (`docker logs -f local-mystock-fpm`):
+- `request` (info): method, uri, status and `duration_ms`, one per request;
+- `health check failed` (warning) and `unhandled exception` (error, with stack trace).
+
+Every line of the same request shares `extra.uid`. Set the minimum level with `LOG_LEVEL` in `etc/config/local.env` (default `info`).
 
 ### Dependencies
 1. Docker
