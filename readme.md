@@ -1,9 +1,64 @@
-### PHP-FPM Web API
+### MyStock API
+
+Product catalog API, used to practice caching (cache-aside with Redis) on top of MySQL.
 
 ### How it Works
 Uses Nginx as a proxy server;
 
-Api requests (under the /api prefix) are forwarded to the PHP-FPM;
+Api requests (under the /api prefix) are forwarded to the PHP-FPM, with the rest of the path in `PATH_INFO`;
+
+No framework: layers, each one calling the next: `Router` → `Controllers` → `Services` → `Repositories` → MySQL.
+
+```
+src
++-- index.php       // front controller: wires the dependencies, declares the routes, handles errors
++-- Http            // Router, Request, Response, HttpException
++-- Controllers     // HTTP <-> service: reads path/query/body, formats the response
++-- Services        // business rules and validation
++-- Repositories    // ProductRepository (interface) and its MySQL implementation
++-- Models          // Product
++-- Infra           // Config (env), Database (PDO), RedisFactory (Predis)
+database
++-- migrations      // Phinx migrations; the first one creates the schema
++-- seeds           // Phinx seeders (ProductSeeder: 500 sample products)
+docs                // Swagger UI (index.html) + OpenAPI spec (openapi.yaml), served by nginx
+```
+
+Repositories implement an interface so a cached implementation can wrap the MySQL one.
+
+### Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/health` | MySQL and Redis status (200 or 503) |
+| GET | `/api/products?category=&page=&limit=` | paginated list, ordered by name (`limit` up to 100) |
+| GET | `/api/products/{id}` | one product |
+| PATCH | `/api/products/{id}` | changes `price_cents` and/or `stock` (non-negative integers) |
+
+Swagger UI at `/docs/` (`/` redirects there); the spec is `docs/openapi.yaml`, written by hand: update it when a route changes.
 
 ### Dependencies
-- Docker
+1. Docker
+2. The [stack-containers](https://github.com/mrtrevisan/stack-containers) `core`, `infra/local-mysql` and `infra/local-redis` services running
+
+### Running
+1. Create the database (as MySQL root) and give the API user access to it:
+```bash
+docker exec local-mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS catalog; GRANT ALL PRIVILEGES ON catalog.* TO \`$MYSQL_USER\`@\`%\`;"'
+```
+
+2. Configure and start:
+```bash
+cp etc/config/example.env etc/config/local.env   # fill in the DB_* and REDIS_* values
+docker compose up -d --build
+```
+
+3. Run the migrations and load 500 sample products (the seed recreates the data on every run), with [Phinx](https://phinx.org) inside the FPM container:
+```bash
+docker exec local-mystock-fpm vendor/bin/phinx migrate
+docker exec local-mystock-fpm vendor/bin/phinx seed:run
+```
+
+New migration: `docker exec local-mystock-fpm vendor/bin/phinx create MyChange` (the file appears in `database/migrations`, mounted in the container). Undo the last one with `phinx rollback`.
+
+The API answers at `https://mystock.cloud.local/api` and the docs at `https://mystock.cloud.local/docs/` (via Traefik; no port is published on the host).

@@ -1,0 +1,17 @@
+{
+    "name": "mrtrevisan/mystock",
+    "type": "project",
+    "require": {
+        "php": "^8.5",
+        "ext-json": "*",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "predis/predis": "^3.6",
+        "robmorgan/phinx": "^0.16.12"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    }
+}

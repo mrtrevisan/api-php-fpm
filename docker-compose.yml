@@ -1,41 +1,42 @@
 services:
-  php-fpm:
-    container_name: php-fpm
+  # names are prefixed: the internal network is shared by every stack
+  local-mystock-fpm:
+    container_name: local-mystock-fpm
     build:
       context: .
+    env_file: etc/config/local.env
     volumes:
-      - ./api:/var/www/html
+      # live code for development; the image also ships its own copy
+      - ./src:/var/www/src
+      - ./database:/var/www/database
     networks:
       - internal
 
-  nginx-proxy:
-    container_name: nginx-proxy
-    image: nginx:latest
+  local-mystock-nginx:
+    container_name: local-mystock-nginx
+    image: nginx:stable-alpine
     volumes:
       - ./etc/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    ports:
-      - "8080:8080"
+      - ./docs:/usr/share/nginx/docs:ro
     depends_on:
-      - php-fpm
+      - local-mystock-fpm
     networks:
       - internal
       - traefik-proxy
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=traefik-proxy"
-      - "traefik.http.routers.php-api.entrypoints=http" 
-      - "traefik.http.routers.php-api.rule=Host(`php.cloud.local`)"
-      - "traefik.http.middlewares.php-api-https-redirect.redirectscheme.scheme=https"
-      - "traefik.http.routers.php-api.middlewares=php-api-https-redirect"
-      - "traefik.http.routers.php-api-secure.rule=Host(`php.cloud.local`)"
-      - "traefik.http.routers.php-api-secure.entrypoints=https"
-      - "traefik.http.routers.php-api-secure.tls=true"
-      - "traefik.http.services.php-api-secure.loadbalancer.server.port=8080"
+      - "traefik.http.routers.mystock.entrypoints=http"
+      - "traefik.http.routers.mystock.rule=Host(`mystock.cloud.local`)"
+      - "traefik.http.middlewares.mystock-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.routers.mystock.middlewares=mystock-https-redirect"
+      - "traefik.http.routers.mystock-secure.rule=Host(`mystock.cloud.local`)"
+      - "traefik.http.routers.mystock-secure.entrypoints=https"
+      - "traefik.http.routers.mystock-secure.tls=true"
+      - "traefik.http.services.mystock.loadbalancer.server.port=8080"
 
 networks:
   internal:
-    driver: bridge
     external: true
-    
   traefik-proxy:
     external: true
