@@ -9,13 +9,21 @@ use JsonException;
 final class Request
 {
     // método (GET, POST, PATCH, ...), caminho após o prefixo /api,
-    // query string e body JSON
+    // query string, body JSON e header Authorization;
+    // userId só é preenchido nas rotas protegidas (RequireAuth)
     public function __construct(
         public readonly string $method,
         public readonly string $path,
         public readonly array $query,
         public readonly array $body,
+        public readonly ?string $authorization = null,
+        public readonly ?int $userId = null,
     ) {
+    }
+
+    public function withUserId(int $userId): self
+    {
+        return clone($this, ['userId' => $userId]);
     }
 
     public static function fromGlobals(): self
@@ -28,6 +36,8 @@ final class Request
             $path === '' ? '/' : $path,
             $_GET,
             self::parseBody(file_get_contents('php://input') ?: ''),
+            // o FastCGI entrega cada header como HTTP_<NOME>
+            $_SERVER['HTTP_AUTHORIZATION'] ?? null,
         );
     }
 

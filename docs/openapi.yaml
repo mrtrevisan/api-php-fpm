@@ -7,12 +7,14 @@ servers:
   - url: /api
 tags:
   - name: health
+  - name: auth
   - name: products
 paths:
   /health:
     get:
       tags: [health]
       summary: MySQL and Redis status
+      security: []
       responses:
         "200":
           description: every dependency answered
@@ -24,10 +26,54 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Health" }
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: Create a user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "201":
+          description: user created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409":
+          description: email already registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Get a JWT valid for 1 hour
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Credentials" }
+      responses:
+        "200":
+          description: logged in
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token]
+                properties:
+                  token: { type: string }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /products:
     get:
       tags: [products]
       summary: Paginated list, ordered by name
+      security: []
       parameters:
         - name: category
           in: query
@@ -54,6 +100,7 @@ paths:
     get:
       tags: [products]
       summary: One product
+      security: []
       responses:
         "200":
           description: the product
@@ -64,6 +111,8 @@ paths:
     patch:
       tags: [products]
       summary: Change price and/or stock
+      security:
+        - bearer: []
       requestBody:
         required: true
         content:
@@ -76,9 +125,27 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Product" }
         "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, maxLength: 254, example: ana@example.com }
+        password: { type: string, minLength: 8, example: secret123 }
+    User:
+      type: object
+      required: [id, email]
+      properties:
+        id: { type: integer, example: 1 }
+        email: { type: string, example: ana@example.com }
     Product:
       type: object
       required: [id, sku, name, category, price_cents, stock, updated_at]
@@ -124,6 +191,11 @@ components:
   responses:
     BadRequest:
       description: invalid parameter or body
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: missing, invalid or expired token / invalid credentials
       content:
         application/json:
           schema: { $ref: "#/components/schemas/Error" }

@@ -8,7 +8,8 @@
         "ext-pdo_mysql": "*",
         "predis/predis": "^3.6",
         "robmorgan/phinx": "^0.16.12",
-        "monolog/monolog": "^3.12"
+        "monolog/monolog": "^3.12",
+        "firebase/php-jwt": "^7.2"
     },
     "autoload": {
         "psr-4": {

@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Controllers\AuthController;
 use App\Controllers\HealthController;
 use App\Controllers\ProductController;
 use App\Http\HttpException;
 use App\Http\Request;
+use App\Http\RequireAuth;
 use App\Http\Response;
 use App\Http\Router;
 use App\Infra\Config;
@@ -13,6 +15,8 @@ use App\Infra\Database;
 use App\Infra\LoggerFactory;
 use App\Infra\RedisFactory;
 use App\Repositories\MysqlProductRepository;
+use App\Repositories\MysqlUserRepository;
+use App\Services\AuthService;
 use App\Services\ProductService;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -34,14 +38,21 @@ try {
     $db = new Database($config);
     $redis = RedisFactory::create($config);
 
+    $authService = new AuthService(new MysqlUserRepository($db), $config->jwtSecret);
+    $requireAuth = new RequireAuth($authService);
+
+    $auth = new AuthController($authService);
     $products = new ProductController(new ProductService(new MysqlProductRepository($db)));
     $health = new HealthController($db, $redis, $logger);
 
     $router = new Router();
     $router->get('/health', $health->check(...));
+    $router->post('/auth/register', $auth->register(...));
+    $router->post('/auth/login', $auth->login(...));
     $router->get('/products', $products->list(...));
     $router->get('/products/{id}', $products->show(...));
-    $router->patch('/products/{id}', $products->update(...));
+    // leituras são públicas; alterações exigem token
+    $router->patch('/products/{id}', $requireAuth($products->update(...)));
 
     $response = $router->dispatch(Request::fromGlobals());
 } catch (HttpException $e) {

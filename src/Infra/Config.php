@@ -18,6 +18,7 @@ final readonly class Config
         public string $redisHost,
         public int $redisPort,
         public string $redisPassword,
+        public string $jwtSecret,
     ) {
     }
 
@@ -32,7 +33,19 @@ final readonly class Config
             redisHost: self::required('REDIS_HOST'),
             redisPort: (int) (getenv('REDIS_PORT') ?: 6379),
             redisPassword: self::required('REDIS_PASSWORD'),
+            jwtSecret: self::jwtSecret(),
         );
+    }
+
+    // HS256 com chave curta é quebrável por força bruta; o php-jwt também recusa menos de 32 bytes
+    private static function jwtSecret(): string
+    {
+        $secret = self::required('JWT_SECRET_KEY');
+        if (strlen($secret) < 32) {
+            throw new RuntimeException('environment variable JWT_SECRET_KEY must have at least 32 bytes');
+        }
+
+        return $secret;
     }
 
     private static function required(string $name): string
