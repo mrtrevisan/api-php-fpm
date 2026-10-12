@@ -33,8 +33,8 @@ openssl rand -base64 48
 
 3. Create the database and give the API user access to it (as MySQL root; e.g. in phpMyAdmin or `docker exec -it local-mysql mysql -uroot -p`). Tables are created by the migrations:
 ```sql
-CREATE DATABASE IF NOT EXISTS catalog;
-GRANT ALL PRIVILEGES ON catalog.* TO '<DB_USER>'@'%';
+CREATE DATABASE IF NOT EXISTS mystock;
+GRANT ALL PRIVILEGES ON mystock.* TO '<DB_USER>'@'%';
 ```
 
 4. Run:
