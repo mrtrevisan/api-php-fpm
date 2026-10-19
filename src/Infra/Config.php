@@ -18,6 +18,7 @@ final readonly class Config
         public string $redisHost,
         public int $redisPort,
         public string $redisPassword,
+        public int $cacheTtlSeconds,
         public string $jwtSecret,
     ) {
     }
@@ -33,6 +34,7 @@ final readonly class Config
             redisHost: self::required('REDIS_HOST'),
             redisPort: (int) (getenv('REDIS_PORT') ?: 6379),
             redisPassword: self::required('REDIS_PASSWORD'),
+            cacheTtlSeconds: (int) (getenv('CACHE_TTL_SECONDS') ?: 600),
             jwtSecret: self::jwtSecret(),
         );
     }

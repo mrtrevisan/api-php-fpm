@@ -17,7 +17,7 @@ Product catalog: lists and shows products and lets authenticated users change pr
 
 ## Concepts
 
-- Caching with Redis: cache-aside + invalidation (in progress)
+- Caching with Redis: cache-aside + invalidation on PATCH
 - Layered architecture (`Router` → `Controllers` → `Services` → `Repositories`)
 - nginx + PHP-FPM (FastCGI)
 - Network isolation (FPM only on the `internal` network)
@@ -30,14 +30,14 @@ Product catalog: lists and shows products and lets authenticated users change pr
 
 ## Running
 
-Requires Docker and the [stack-containers](https://github.com/mrtrevisan/stack-containers) `core`, `infra/local-mysql` and `infra/local-redis` services running.
+Requires Docker and the [stack-containers](https://github.com/mrtrevisan/stack-containers) `core`, `infra/local-mysql` and `infra/caching/redis` services running.
 
 1. Create the env file:
 ```bash
 cp ./etc/config/example.env ./etc/config/local.env
 ```
 
-2. Set the environment variables. `DB_*`, `REDIS_*` and `JWT_SECRET_KEY` (32+ bytes) are required. Generate the JWT secret with:
+2. Set the environment variables. `DB_*`, `REDIS_*` and `JWT_SECRET_KEY` (32+ bytes) are required; `CACHE_TTL_SECONDS` is optional (default 600). Generate the JWT secret with:
 ```bash
 openssl rand -base64 48
 ```

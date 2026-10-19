@@ -5,6 +5,11 @@ services:
     build:
       context: .
     env_file: etc/config/local.env
+    # with a dependency container stopped its name stops resolving, and musl waits 5s before failing;
+    # the Redis/MySQL client timeouts don't cover DNS, so bound it here
+    dns_opt:
+      - timeout:1
+      - attempts:1
     volumes:
       # live code for development; the image also ships its own copy
       - ./src:/var/www/src

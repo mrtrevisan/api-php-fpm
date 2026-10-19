@@ -87,6 +87,8 @@ paths:
       responses:
         "200":
           description: one page of products
+          headers:
+            X-Cache: { $ref: "#/components/headers/XCache" }
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProductPage" }
@@ -104,6 +106,8 @@ paths:
       responses:
         "200":
           description: the product
+          headers:
+            X-Cache: { $ref: "#/components/headers/XCache" }
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Product" }
@@ -128,6 +132,10 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "404": { $ref: "#/components/responses/NotFound" }
 components:
+  headers:
+    XCache:
+      description: HIT when the response came from Redis, MISS when it was read from MySQL (and then cached)
+      schema: { type: string, enum: [HIT, MISS] }
   securitySchemes:
     bearer:
       type: http

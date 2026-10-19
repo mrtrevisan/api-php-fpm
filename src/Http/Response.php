@@ -18,6 +18,11 @@ final class Response
         return new self($status, $data, $headers);
     }
 
+    public function withHeader(string $name, string $value): self
+    {
+        return new self($this->status, $this->data, [...$this->headers, $name => $value]);
+    }
+
     public function send(): void
     {
         // serializa antes de enviar os headers, para uma falha ainda poder virar 500
